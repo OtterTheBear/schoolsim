@@ -10,8 +10,7 @@ import schoolsim_buzzwords
 import random
 import datetime
 import os
-
-
+import pickle as p
 
 class Obj:
     def __init__(self, name, uses):
@@ -68,6 +67,8 @@ class Player:
         self.loc = loc
 
 
+
+
 def say(text, speed=0.05):
     for char in text:
         print(char, end="")
@@ -111,7 +112,7 @@ def goforth(player, asleep, time):
         player.reps = 120
     if player.rept > 120:
         player.rept = 120
-
+    
     if "tired" in player.traits and player.gradepad > -3:
         player.gradepad -= 1
 
@@ -142,7 +143,7 @@ def goforth(player, asleep, time):
 
     if (player.loc in ["cafe", "lib", "main"]) and (time >= 8.5) and (time <= 15):
         player.rept -= 10
-        if player.rept < 1:
+        if player.rept <= 0:
             say("\"HEY! What are you doing out of class again?\"")
             t.sleep(3)
             say("\"Your actions have convinced us that you do not want to go here.\"")
@@ -247,54 +248,20 @@ def main(): # start a game from another program
         if os.name == "posix":
             saves = os.popen("ls -1r saves/").read().split("\n")
         elif os.name == "nt":
-            print(os.popen("dir /-O saves\\").read())
-            saves = os.popen("dir /-O saves\\").read().split("\n")[:-2][7:]
+            saves = os.popen("dir /-O /B saves\\").read().split("\n")
             for x in saves:
                 x = x[38:]
                 print(x)
         for x in range(0, len(saves)-1):
             print(f"{x}: {saves[x]}")
         savetouse = int(input("Type the name of the save you want to use: "))
-        with open("saves/"+saves[savetouse]) as savefiletouse:
-            savestring = savefiletouse.read()
-            unprocvarlist = savestring.split("\n")
-            varlist = []
-            for x in unprocvarlist:
-                if x[:3] != "inv":
-                    varlist.append(x.split(": "))
-                else:
-                    varlist.append(x.split(": ", 1))
-            varlist = varlist[:-1]
-            vardic = {}
-            print("varlist", varlist)
-            input()
-            for item in varlist:
-                try:
-                    vardic[item[0]] = int(item[1])
-                except ValueError:
-                    if "," in item[1] and item[1][0] != "{":
-                        vardic[item[0]] = item[1].split(",")
-                    elif "{" == item[1][0]:
-                        vardic[item[0]] = strtodict(item[1])
-                    else:
-                        vardic[item[0]] = item[1]
-            print(vardic)
-            player = Player(vardic["name"], vardic["inv"], vardic["loc"], vardic["traits"])
-            player.gradepad = int(vardic["gradepad"])
-            player.wakinghours = float(vardic["wakinghours"])
-            player.bux = int(vardic["bux"])
-            player.reps = int(vardic["reps"])
-            player.rept = int(vardic["rept"])
-            if "repsbonusdone" in vardic:
-                player.repsbonusdone = vardic["repsbonusdone"]
-            if "reptbonusdone" in vardic:
-                player.reptbonusdone = vardic["reptbonusdone"]
-
-            coffeenum = int(vardic["coffeenum"])
-            bjnum = int(vardic["bjnum"])
-            time = float(vardic["time"])
-
-
+        with open("saves/"+saves[savetouse], "rb") as savefiletouse:
+            player = p.load(savefiletouse)
+            coffeenum = p.load(savefiletouse)
+            bjnum = p.load(savefiletouse)
+            time = p.load(savefiletouse)
+    
+            
     while True:
         
         cmd = input("> ")
@@ -315,6 +282,7 @@ def main(): # start a game from another program
             
             elif (cmd[0] == "go") and (cmd[1] in ["c", "cafe", "café"]) and (player.loc != "cafe") and (player.loc not in ["math"]):
                 player.loc = "cafe"
+                
 
             elif cmd[0] == "go" and cmd[1] in ["m", "main"] and player.loc != "main":
                 player.loc = "main"
@@ -374,7 +342,8 @@ def main(): # start a game from another program
                     goforth(player, True, time)
 
                 player.wakinghours = 0
-                player.traits.remove("tired")
+                if "tired" in player.traits:
+                    player.traits.remove("tired")
             
             elif cmd[0] in ["i", "inv", "inventory"]:
                 player.getinv()
@@ -426,9 +395,11 @@ def main(): # start a game from another program
                                         jailstr = jail.read()
                                 print(jailstr)
                                 sys.exit()
-
                         else:
-                            player.bux = schoolsim_bjcurses.main(False, player.bux) 
+                            player.bux = schoolsim_bjcurses.main(False, player.bux)
+
+                    else:
+                        player.bux = schoolsim_bjcurses.main(False, player.bux) 
 
 
                 else:
@@ -472,7 +443,7 @@ def main(): # start a game from another program
                     print(player.bux)
                 elif cmd[1] in ["w", "wkh", "wakinghours"]:
                     print(player.wakinghours)
-
+                
             elif cmd[0] in ["q", "quit", "exit"]:
                 sys.exit()
 
@@ -482,58 +453,13 @@ def main(): # start a game from another program
                         thedate = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
                     elif os.name == "nt":
                         thedate = datetime.datetime.now().strftime("%Y-%m-%d_%H.%M.%S")
-                    with open(f"saves/{thedate}", "w") as savefile:
-                        if "cool" in player.traits:
-                            savefile.write(
-                                    f"name: {player.name}\n"
-                                    f"inv: {player.inv}\n"
-                                    f"gradepad: {player.gradepad}\n"
-                                    f"loc: {player.loc}\n"
-                                    f"traits: {frmtlist(player.traits)}\n"
-                                    f"wakinghours: {player.wakinghours}\n"
-                                    f"bux: {player.bux}\n"
-                                    f"reps: {player.reps}\n"
-                                    f"rept: {player.rept}\n"
-                                    f"repsbonusdone: {player.repsbonusdone}\n"
-                                    f"coffeenum: {coffeenum}\n"
-                                    f"bjnum: {bjnum}\n"
-                                    f"time: {time}\n"
-                            )
+                    with open(f"saves/{thedate}", "wb") as savefile:
+                        p.dump(player, savefile, p.HIGHEST_PROTOCOL)
+                        p.dump(time, savefile, p.HIGHEST_PROTOCOL)
+                        p.dump(coffeenum, savefile, p.HIGHEST_PROTOCOL)
+                        p.dump(bjnum, savefile, p.HIGHEST_PROTOCOL)
 
-                        elif "pet" in player.traits:
-                            savefile.write(
-                                    f"name: {player.name}\n"
-                                    f"inv: {player.inv}\n"
-                                    f"gradepad: {player.gradepad}\n"
-                                    f"loc: {player.loc}\n"
-                                    f"traits: {frmtlist(player.traits)}\n"
-                                    f"wakinghours: {player.wakinghours}\n"
-                                    f"bux: {player.bux}\n"
-                                    f"reps: {player.reps}\n"
-                                    f"rept: {player.rept}\n"
-                                    f"reptbonusdone: {player.reptbonusdone}\n"
-                                    f"coffeenum: {coffeenum}\n"
-                                    f"bjnum: {bjnum}\n"
-                                    f"time: {time}\n"
-                            )
-
-                        else:
-                            savefile.write(
-                                    f"name: {player.name}\n"
-                                    f"inv: {player.inv}\n"
-                                    f"gradepad: {player.gradepad}\n"
-                                    f"loc: {player.loc}\n"
-                                    f"traits: {frmtlist(player.traits)}\n"
-                                    f"wakinghours: {player.wakinghours}\n"
-                                    f"bux: {player.bux}\n"
-                                    f"reps: {player.reps}\n"
-                                    f"rept: {player.rept}\n"
-                                    f"coffeenum: {coffeenum}\n"
-                                    f"bjnum: {bjnum}\n"
-                                    f"time: {time}\n"
-                            )
-
-
+                        
                         savefile.close()
                         sys.exit()
 
