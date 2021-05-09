@@ -76,33 +76,6 @@ def say(text, speed=0.05):
         t.sleep(speed)
     print()
 
-def frmtlist(inlist):
-    result = ""
-    for item in inlist:
-        result += item + ","
-    return result[:-1]
-
-def strtodict(string):
-    if string != "{}":
-        string = string[1:-1] #remove brackets
-        string = string.split(", ") # split to k-v pairs
-        for item in string:
-            item = item.split(": ") # split keys and vals
-        print("Split up", string)
-
-
-        result = {}
-        c = 0
-        while c < len(string):
-            result[string[c][1:-1]] = string[c+1][1:-1]
-            print("strc", string[c][1:-1])
-            c += 2
-        print("res", result)
-        return result
-    
-    else:
-        return {}
-
 def goforth(player, asleep, time):
     yes = ["Y", "y", "yes"]
     no = ["N", "n", "no"]
